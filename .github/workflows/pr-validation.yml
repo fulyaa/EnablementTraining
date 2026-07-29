@@ -1,11 +1,16 @@
 name: PR Validation
 
-# Validate every pull request into develop (integration) or main (production)
-# with a check-only deployment + local tests. Nothing is actually deployed here.
+# Validate every pull request with a check-only deployment + local tests.
+# Nothing is actually deployed here. The PR's target branch decides which org
+# it is validated against:
+#   -> develop : Developer sandbox   secret: SFDX_AUTH_URL_DEVELOP
+#   -> stage   : UAT sandbox         secret: SFDX_AUTH_URL_STAGE
+#   -> main    : Production          secret: SFDX_AUTH_URL_PRODUCTION
 on:
   pull_request:
     branches:
       - develop
+      - stage
       - main
 
 jobs:
@@ -26,8 +31,7 @@ jobs:
 
       - name: Authenticate to target org
         env:
-          # PRs into main validate against production; everything else against integration.
-          SFDX_AUTH_URL: ${{ github.base_ref == 'main' && secrets.SFDX_AUTH_URL_PRODUCTION || secrets.SFDX_AUTH_URL_INTEGRATION }}
+          SFDX_AUTH_URL: ${{ (github.base_ref == 'main' && secrets.SFDX_AUTH_URL_PRODUCTION) || (github.base_ref == 'stage' && secrets.SFDX_AUTH_URL_STAGE) || secrets.SFDX_AUTH_URL_DEVELOP }}
         run: |
           if [ -z "$SFDX_AUTH_URL" ]; then
             echo "::error::Missing SFDX auth URL secret for target '${{ github.base_ref }}'."

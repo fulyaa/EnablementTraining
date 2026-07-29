@@ -1,12 +1,14 @@
 name: Deploy
 
-# Deploy on merge:
-#   develop -> integration sandbox
-#   main    -> production
+# Deploy on merge. Branch -> target org mapping:
+#   develop -> Developer sandbox   (orgfarm-dcf0a4eebe--developer.sandbox.my.salesforce.com)  secret: SFDX_AUTH_URL_DEVELOP
+#   stage   -> UAT sandbox         (orgfarm-dcf0a4eebe--uat.sandbox.my.salesforce.com)        secret: SFDX_AUTH_URL_STAGE
+#   main    -> Production          (orgfarm-dcf0a4eebe.my.salesforce.com)                     secret: SFDX_AUTH_URL_PRODUCTION
 on:
   push:
     branches:
       - develop
+      - stage
       - main
 
 concurrency:
@@ -31,7 +33,7 @@ jobs:
 
       - name: Authenticate to target org
         env:
-          SFDX_AUTH_URL: ${{ github.ref_name == 'main' && secrets.SFDX_AUTH_URL_PRODUCTION || secrets.SFDX_AUTH_URL_INTEGRATION }}
+          SFDX_AUTH_URL: ${{ (github.ref_name == 'main' && secrets.SFDX_AUTH_URL_PRODUCTION) || (github.ref_name == 'stage' && secrets.SFDX_AUTH_URL_STAGE) || secrets.SFDX_AUTH_URL_DEVELOP }}
         run: |
           if [ -z "$SFDX_AUTH_URL" ]; then
             echo "::error::Missing SFDX auth URL secret for branch '${{ github.ref_name }}'."
