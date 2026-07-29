@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Exercise 4: components to delete from the target org. -->
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Contact.Region__c</members>
+        <name>CustomField</name>
+    </types>
+</Package>

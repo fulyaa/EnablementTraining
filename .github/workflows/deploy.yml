@@ -1,0 +1,50 @@
+name: Deploy
+
+# Deploy on merge:
+#   develop -> integration sandbox
+#   main    -> production
+on:
+  push:
+    branches:
+      - develop
+      - main
+
+concurrency:
+  group: deploy-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to target org
+        env:
+          SFDX_AUTH_URL: ${{ github.ref_name == 'main' && secrets.SFDX_AUTH_URL_PRODUCTION || secrets.SFDX_AUTH_URL_INTEGRATION }}
+        run: |
+          if [ -z "$SFDX_AUTH_URL" ]; then
+            echo "::error::Missing SFDX auth URL secret for branch '${{ github.ref_name }}'."
+            exit 1
+          fi
+          printf '%s' "$SFDX_AUTH_URL" > ./auth_url.txt
+          sf org login sfdx-url --sfdx-url-file ./auth_url.txt --alias target --set-default
+          rm -f ./auth_url.txt
+
+      - name: Deploy to org
+        run: |
+          sf project deploy start \
+            --source-dir force-app \
+            --test-level RunLocalTests \
+            --target-org target \
+            --wait 60
