@@ -42,6 +42,9 @@ $RECYCLE.BIN/
 # Local environment variables
 .env
 
+# Trainer-only material — keep local, never push to GitHub
+TRAINER-GUIDE.md
+
 # Python Salesforce Functions
 **/__pycache__/
 **/.venv/
