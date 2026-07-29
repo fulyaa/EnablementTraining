@@ -1,0 +1,45 @@
+name: PR Validation (develop)
+
+# Check-only validation for PRs targeting develop. Nothing is deployed.
+# Uses secret: SFDX_AUTH_URL_DEVELOP
+on:
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  validate:
+    name: Validate against Developer sandbox
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Salesforce CLI
+        run: npm install --global @salesforce/cli
+
+      - name: Authenticate to Developer sandbox
+        env:
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL_DEVELOP }}
+        run: |
+          if [ -z "$SFDX_AUTH_URL" ]; then
+            echo "::error::Missing secret SFDX_AUTH_URL_DEVELOP."
+            exit 1
+          fi
+          printf '%s' "$SFDX_AUTH_URL" > ./auth_url.txt
+          sf org login sfdx-url --sfdx-url-file ./auth_url.txt --alias target --set-default
+          rm -f ./auth_url.txt
+
+      - name: Validate deployment (dry run)
+        run: |
+          sf project deploy start \
+            --dry-run \
+            --source-dir force-app \
+            --test-level RunLocalTests \
+            --target-org target \
+            --wait 60

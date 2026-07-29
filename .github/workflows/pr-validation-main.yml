@@ -1,21 +1,15 @@
-name: PR Validation
+name: PR Validation (main)
 
-# Validate every pull request with a check-only deployment + local tests.
-# Nothing is actually deployed here. The PR's target branch decides which org
-# it is validated against:
-#   -> develop : Developer sandbox   secret: SFDX_AUTH_URL_DEVELOP
-#   -> stage   : UAT sandbox         secret: SFDX_AUTH_URL_STAGE
-#   -> main    : Production          secret: SFDX_AUTH_URL_PRODUCTION
+# Check-only validation for PRs targeting main. Nothing is deployed.
+# Uses secret: SFDX_AUTH_URL_PRODUCTION
 on:
   pull_request:
     branches:
-      - develop
-      - stage
       - main
 
 jobs:
   validate:
-    name: Check-only deploy + tests
+    name: Validate against Production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
@@ -29,12 +23,12 @@ jobs:
       - name: Install Salesforce CLI
         run: npm install --global @salesforce/cli
 
-      - name: Authenticate to target org
+      - name: Authenticate to Production
         env:
-          SFDX_AUTH_URL: ${{ (github.base_ref == 'main' && secrets.SFDX_AUTH_URL_PRODUCTION) || (github.base_ref == 'stage' && secrets.SFDX_AUTH_URL_STAGE) || secrets.SFDX_AUTH_URL_DEVELOP }}
+          SFDX_AUTH_URL: ${{ secrets.SFDX_AUTH_URL_PRODUCTION }}
         run: |
           if [ -z "$SFDX_AUTH_URL" ]; then
-            echo "::error::Missing SFDX auth URL secret for target '${{ github.base_ref }}'."
+            echo "::error::Missing secret SFDX_AUTH_URL_PRODUCTION."
             exit 1
           fi
           printf '%s' "$SFDX_AUTH_URL" > ./auth_url.txt
